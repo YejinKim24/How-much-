@@ -12,7 +12,7 @@ import datetime
 # 프로그램 목적: 달러, 엔화, 위안, 유로의 환율을 알아보는 프로그램을 만든다
 
 def crow(): #크롤링을 하는 함수
-    global usa,jp,ch,eu,time,bank,gold_dom
+    global usa,jp,ch,eu,time,bank,gold_dom,gold_nat,oil
     # URL
     url_d = urlopen(
         "https://finance.naver.com/marketindex/exchangeDetail.nhn?marketindexCd=FX_USDKRW")  # 미국 달러 환율, 네이버증권
@@ -26,6 +26,8 @@ def crow(): #크롤링을 하는 함수
 
     url_gold = urlopen("https://finance.naver.com/marketindex/goldDetail.naver")  # 국내 금값 시세
     url_gold2 = urlopen("https://finance.naver.com/marketindex/worldGoldDetail.naver?marketindexCd=CMDT_GC&fdtc=2")  # 국내 금값 시세
+    url_oil = urlopen(
+        "https://finance.naver.com/marketindex/oilDetail.naver?marketindexCd=OIL_GSL")  # 휘발유 시세
 
     # SOUP
     soup_d = BeautifulSoup(url_d, "html.parser")
@@ -34,6 +36,9 @@ def crow(): #크롤링을 하는 함수
     soup_e = BeautifulSoup(url_e, "html.parser")
     soup_time = BeautifulSoup(url_time, "html.parser")
     soup_gold = BeautifulSoup(url_gold, "html.parser")
+    soup_gold2 = BeautifulSoup(url_gold2, "html.parser")
+    soup_oil = BeautifulSoup(url_oil, "html.parser")
+
     # KRW_VALUE
     value_d = soup_d.find("p", "no_today")  # p값 no_today 클래스에 오늘의 환율이 있음.
     value_y = soup_y.find("p", "no_today")  # p값 no_today 클래스에 오늘의 환율이 있음.
@@ -42,6 +47,9 @@ def crow(): #크롤링을 하는 함수
     value_time = soup_time.find("span", "date")
     value_bank = soup_e.find("span", "standard")
     value_gold = soup_gold.find("p", "no_today")
+    value_gold2 = soup_gold2.find("p", "no_today")
+    value_oil = soup_oil.find("p", "no_today")
+
     # STRIP
     dollar = value_d.text.strip()
     enwha = value_y.text.strip()
@@ -50,12 +58,17 @@ def crow(): #크롤링을 하는 함수
     tm = value_time.text.strip()
     bk = value_bank.text.strip()
     gd = value_gold.text.strip()
+    gd2 = value_gold2.text.strip()
+    oils = value_oil.text.strip()
+
     # VALUE_INDEX
     usa = float(dollar[0:8].replace(',', ''))
     jp = float(enwha[0:8].replace(',', ''))
     ch = float(yuan[0:8].replace(',', ''))
     eu = float(euro[0:8].replace(',', ''))
     gold_dom = str(gd[0:8].replace(',', ''))
+    gold_nat = str(gd2[0:8].replace(',', ''))
+    oil = str(oils[0:8].replace(',', '')) + " 원(W)"
     time = str(tm)
     bank = str(bk) + " 고시 기준"
 crow()
@@ -77,6 +90,8 @@ orange = (112, 92, 76)
 font_color = (205,205,205)
 font_color1 = (255,255,255)
 blue = (79, 161, 255)
+black = (20, 20, 20)
+white_color = (250,250,250)
 
 #init
 pygame.init()
@@ -95,10 +110,26 @@ loading = pygame.image.load("img/re.png")
 app_font = pygame.font.Font("font/pl.otf", 15)
 app_font1 = pygame.font.Font("font/pr.otf", 20)
 app_font3 = pygame.font.Font("font/pr.otf", 12)
+app_font4 = pygame.font.Font("font/pm.otf", 20)
 
 def content_write_gold(screen, value):
     sur = app_font.render("국내 금값(1g) | "+value+" 원(W)", True, font_color1)
-    screen.blit(sur, [20,50])  #폰트 띄우기
+    screen.blit(sur, [20,70])  #폰트 띄우기
+
+def content_write_gold2(screen, value):
+    sur = app_font.render("국제 금값(1toz) | "+value+" 달러($)", True, font_color1)
+    screen.blit(sur, [20,140])  #폰트 띄우기
+
+def content_write_oil(screen, value):
+    sur = app_font.render("휘발유(리터) | "+value, True, font_color1)
+    screen.blit(sur, [20,210])  #폰트 띄우기
+
+def content_write_Title(screen):
+    sur = app_font4.render("How Much:", True, black)
+    screen.blit(sur, [15,15])  #폰트 띄우기
+def content_write_Title2(screen):
+    sur = app_font.render("오늘의 환율이 궁금하다면? (Beta)", True, black)
+    screen.blit(sur, [121,20])  #폰트 띄우기
 
 class Nation :
     #각 국가별 환율 값을 이용해 그래프를 그릴 때 쓸 클래스
@@ -153,7 +184,7 @@ def main():
         if state == main : #메인 메뉴일때
             for i in range(21): #그래프 긋기
                 pygame.draw.line(monitor, gray, (start_x+i*20,start_y), (start_x+i*20,final_y), width=3)
-                if i%5==0:
+                if i%5==0 and i != 0:
                     pygame.draw.line(monitor, orange, (start_x+i*20,start_y), (start_x+i*20,final_y), width=5)
             pygame.draw.rect(monitor, white, [start_x-30, start_y + 300, 200+30, 30], border_radius=7)
             #nation coin to won
@@ -171,10 +202,16 @@ def main():
             #화살표를 모니터에 띠운다
             monitor.blit(app_font1.render(time, True, font_color1), [15, 760])
             monitor.blit(app_font1.render(bank, True, font_color1), [175, 760])
-
-            pygame.draw.rect(monitor, background_color, [start_x, start_y+35, final_x, 50])
+            # 환율 위의 기타 항목
+            pygame.draw.rect(monitor, background_color, [start_x, start_y+55, final_x, 50])
             content_write_gold(monitor, gold_dom)
-
+            pygame.draw.rect(monitor, background_color, [start_x, start_y + 125, final_x, 50])
+            content_write_gold2(monitor, gold_nat)
+            pygame.draw.rect(monitor, background_color, [start_x, start_y + 195, final_x, 50])
+            content_write_oil(monitor, oil)
+            pygame.draw.rect(monitor,white_color, [start_x, start_y, final_x, 55])
+            content_write_Title(monitor) #제목 띄우기
+            content_write_Title2(monitor)  # 제목 띄우기
 
             #누르면 넘어가게 만든다
             for event in pygame.event.get():
